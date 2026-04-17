@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Words">
+<title>My Words</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1209;
+    --paper: #f5f0e8;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a3;
+    --ember: #c0392b;
+    --sage: #6b7c5e;
+    --shadow: rgba(26,18,9,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Serif JP', serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -120px;
+    right: -80px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(201,168,76,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .screen.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  #screen-today {
+    justify-content: center;
+    align-items: center;
+    padding: 40px 32px;
+  }
+
+  .today-ornament {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0.4;
+  }
+
+  .today-ornament::before, .today-ornament::after {
+    content: '';
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold));
+  }
+
+  .today-ornament::after {
+    background: linear-gradient(to left, transparent, var(--gold));
+  }
+
+  .today-ornament span {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .today-card {
+    width: 100%;
+    max-width: 340px;
+    position: relative;
+  }
+
+  .today-card::before {
+    content: '"';
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 180px;
+    color: var(--gold-light);
+    position: absolute;
+    top: -60px;
+    left: -20px;
+    line-height: 1;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .today-word {
+    font-size: clamp(20px, 5.5vw, 26px);
+    font-weight: 300;
+    line-height: 2.2;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    padding: 20px 0;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .today-meta {
+    text-align: center;
+    margin-top: 24px;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+
+  .today-divider {
+    width: 40px;
+    height: 1px;
+    background: var(--gold);
+    margin: 16px auto;
+    opacity: 0.6;
+  }
+
+  .today-date {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--sage);
+    opacity: 0.7;
+  }
+
+  .btn-shuffle {
+    margin-top: 40px;
+    background: none;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    padding: 12px 32px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-shuffle:active { background: var(--gold); color: var(--paper); }
+  .btn-shuffle svg { width: 14px; height: 14px; }
+
+  .empty-state {
+    text-align: center;
+    color: var(--sage);
+    font-size: 14px;
+    line-height: 2;
+    opacity: 0.7;
+  }
+
+  #screen-list { flex-direction: column; }
+
+  .screen-header {
+    padding: 56px 24px 20px;
+    background: var(--paper);
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+    position: relative;
+  }
+
+  .screen-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    color: var(--ink);
+  }
+
+  .screen-title span { color: var(--gold); }
+
+  .screen-subtitle {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--sage);
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+
+  .btn-add {
+    position: absolute;
+    right: 24px;
+    top: 56px;
+    width: 40px;
+    height: 40px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 12px var(--shadow);
+  }
+
+  .btn-add:active { transform: scale(0.92); }
+
+  .list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .list-container::-webkit-scrollbar { display: none; }
+
+  .word-item {
+    background: white;
+    border-left: 3px solid var(--gold-light);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: border-color 0.2s;
+    box-shadow: 0 2px 8px var(--shadow);
+    cursor: pointer;
+    animation: fadeInUp 0.3s ease both;
+  }
+
+  .word-item:active { border-left-color: var(--gold); }
+
+  .word-item-text {
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.8;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+    margin-right: 60px;
+  }
+
+  .word-item-note {
+    font-size: 11px;
+    color: var(--sage);
+    margin-top: 8px;
+    opacity: 0.7;
+    font-style: italic;
+  }
+
+  .word-item-actions {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    color: var(--ink);
+  }
+
+  .btn-icon:active { opacity: 1; }
+  .btn-delete:active { color: var(--ember); }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,18,9,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--paper);
+    width: 100%;
+    padding: 32px 24px 48px;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-handle {
+    width: 36px;
+    height: 3px;
+    background: var(--gold-light);
+    border-radius: 2px;
+    margin: -16px auto 24px;
+  }
+
+  .modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    color: var(--ink);
+  }
+
+  .modal-title span { color: var(--gold); }
+
+  .field-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--sage);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    background: white;
+    border: 1px solid var(--gold-light);
+    padding: 14px 16px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+    line-height: 1.8;
+    border-radius: 0;
+    -webkit-appearance: none;
+  }
+
+  textarea:focus, input[type="text"]:focus { border-color: var(--gold); }
+
+  .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+
+  .btn-primary {
+    flex: 1;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 16px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    cursor: pointer;
+  }
+
+  .btn-primary:active { opacity: 0.8; }
+
+  .btn-secondary {
+    flex: 1;
+    background: none;
+    color: var(--sage);
+    border: 1px solid var(--gold-light);
+    padding: 16px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    cursor: pointer;
+  }
+
+  .nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--paper);
+    border-top: 1px solid rgba(201,168,76,0.25);
+    display: flex;
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .nav-item {
+    flex: 1;
+    padding: 14px 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.35;
+  }
+
+  .nav-item.active { opacity: 1; }
+  .nav-item svg { width: 22px; height: 22px; color: var(--ink); }
+
+  .nav-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--ink);
+  }
+
+  .nav-item.active .nav-label { color: var(--gold); }
+  .nav-item.active svg { color: var(--gold); }
+
+  #screen-settings { flex-direction: column; }
+
+  .settings-content { flex: 1; overflow-y: auto; padding: 24px 24px 100px; }
+  .settings-section { margin-bottom: 32px; }
+
+  .settings-section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gold-light);
+  }
+
+  .settings-card {
+    background: white;
+    padding: 20px;
+    box-shadow: 0 2px 8px var(--shadow);
+    margin-bottom: 12px;
+  }
+
+  .settings-card p { font-size: 13px; line-height: 2; color: var(--ink); font-weight: 300; }
+  .settings-card strong { color: var(--gold); font-weight: 400; }
+
+  .settings-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(201,168,76,0.15);
+  }
+
+  .settings-step:last-child { border-bottom: none; }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-text { font-size: 13px; line-height: 1.9; font-weight: 300; color: var(--ink); }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,18,9,0.5);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .confirm-overlay.open { opacity: 1; pointer-events: all; }
+
+  .confirm-box {
+    background: var(--paper);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+
+  .confirm-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .confirm-text { font-size: 13px; line-height: 1.8; color: var(--sage); margin-bottom: 24px; }
+  .confirm-actions { display: flex; gap: 12px; }
+
+  .btn-danger {
+    flex: 1;
+    background: var(--ember);
+    color: white;
+    border: none;
+    padding: 14px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="screen active" id="screen-today">
+  <div class="today-ornament"><span>Today's Word</span></div>
+  <div class="today-card">
+    <div class="today-word" id="today-text">
+      <span class="empty-state">まだ言葉が登録されていません。<br>「一覧」から追加してみましょう。</span>
+    </div>
+    <div class="today-divider"></div>
+    <div class="today-meta" id="today-note"></div>
+    <div class="today-date" id="today-date"></div>
+  </div>
+  <button class="btn-shuffle" id="btn-shuffle" style="display:none" onclick="showRandom()">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    </svg>
+    別の言葉を見る
+  </button>
+</div>
+
+<div class="screen" id="screen-list">
+  <div class="screen-header">
+    <div class="screen-title">My <span>Words</span></div>
+    <div class="screen-subtitle" id="word-count">0 words</div>
+    <button class="btn-add" onclick="openModal()">+</button>
+  </div>
+  <div class="list-container" id="list-container"></div>
+</div>
+
+<div class="screen" id="screen-settings">
+  <div class="screen-header">
+    <div class="screen-title">毎日の<span>通知</span></div>
+    <div class="screen-subtitle">iPhoneショートカット設定</div>
+  </div>
+  <div class="settings-content">
+    <div class="settings-section">
+      <div class="settings-section-title">仕組み</div>
+      <div class="settings-card">
+        <p>iPhoneの<strong>ショートカットアプリ</strong>を使って、毎朝このアプリを自動で開く通知を設定します。</p>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">設定手順</div>
+      <div class="settings-card">
+        <div class="settings-step">
+          <div class="step-num">1</div>
+          <div class="step-text">このページをSafariで開き、<strong>共有ボタン →「ホーム画面に追加」</strong>でインストール</div>
+        </div>
+        <div class="settings-step">
+          <div class="step-num">2</div>
+          <div class="step-text"><strong>ショートカット</strong>アプリを開く</div>
+        </div>
+        <div class="settings-step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>「オートメーション」</strong>→「＋」をタップ</div>
+        </div>
+        <div class="settings-step">
+          <div class="step-num">4</div>
+          <div class="step-text"><strong>「時刻」</strong>を選択 → 毎朝の時間を設定 →「毎日」</div>
+        </div>
+        <div class="settings-step">
+          <div class="step-num">5</div>
+          <div class="step-text"><strong>「アクションを追加」→「URLを開く」</strong>→ このアプリのURLを入力</div>
+        </div>
+        <div class="settings-step">
+          <div class="step-num">6</div>
+          <div class="step-text"><strong>「実行前に尋ねる」をオフ</strong>にして完了</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<nav class="nav-bar">
+  <button class="nav-item active" id="nav-today" onclick="showScreen('today')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+    </svg>
+    <span class="nav-label">TODAY</span>
+  </button>
+  <button class="nav-item" id="nav-list" onclick="showScreen('list')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+    </svg>
+    <span class="nav-label">WORDS</span>
+  </button>
+  <button class="nav-item" id="nav-settings" onclick="showScreen('settings')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
+    </svg>
+    <span class="nav-label">通知設定</span>
+  </button>
+</nav>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">新しい<span>言葉</span>を登録</div>
+    <label class="field-label">言葉 *</label>
+    <textarea id="input-word" rows="4" placeholder="大切な言葉を入力してください..."></textarea>
+    <label class="field-label" style="margin-top:16px">メモ（任意）</label>
+    <input type="text" id="input-note" placeholder="いつ、どこで出会った言葉か...">
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">キャンセル</button>
+      <button class="btn-primary" onclick="saveWord()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">この言葉を削除しますか？</div>
+    <div class="confirm-text" id="confirm-text"></div>
+    <div class="confirm-actions">
+      <button class="btn-secondary" onclick="closeConfirm()">キャンセル</button>
+      <button class="btn-danger" onclick="confirmDelete()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let words = JSON.parse(localStorage.getItem('mywords') || '[]');
+  let editingId = null;
+  let deletingId = null;
+
+  function save() { localStorage.setItem('mywords', JSON.stringify(words)); }
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name === 'today') renderToday();
+    if (name === 'list') renderList();
+  }
+
+  function renderToday() {
+    const textEl = document.getElementById('today-text');
+    const noteEl = document.getElementById('today-note');
+    const dateEl = document.getElementById('today-date');
+    const shuffleBtn = document.getElementById('btn-shuffle');
+    const now = new Date();
+    dateEl.textContent = now.getFullYear() + '年' + (now.getMonth()+1) + '月' + now.getDate() + '日';
+    if (words.length === 0) {
+      textEl.innerHTML = '<span class="empty-state">まだ言葉が登録されていません。<br>「WORDS」から追加してみましょう。</span>';
+      noteEl.textContent = '';
+      shuffleBtn.style.display = 'none';
+      return;
+    }
+    shuffleBtn.style.display = 'flex';
+    const w = words[Math.floor(Date.now() / 86400000) % words.length];
+    textEl.textContent = w.word;
+    noteEl.textContent = w.note || '';
+  }
+
+  function showRandom() {
+    if (!words.length) return;
+    const textEl = document.getElementById('today-text');
+    textEl.style.opacity = 0;
+    setTimeout(() => {
+      const w = words[Math.floor(Math.random() * words.length)];
+      textEl.textContent = w.word;
+      document.getElementById('today-note').textContent = w.note || '';
+      textEl.style.transition = 'opacity 0.4s';
+      textEl.style.opacity = 1;
+    }, 200);
+  }
+
+  function renderList() {
+    const container = document.getElementById('list-container');
+    document.getElementById('word-count').textContent = words.length + ' words';
+    if (!words.length) {
+      container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--sage);font-size:13px;line-height:2;opacity:0.6">「＋」ボタンから<br>大切な言葉を登録しましょう</div>';
+      return;
+    }
+    container.innerHTML = words.map((w, i) => `
+      <div class="word-item" style="animation-delay:${i*0.05}s">
+        <div class="word-item-text">${esc(w.word)}</div>
+        ${w.note ? `<div class="word-item-note">${esc(w.note)}</div>` : ''}
+        <div class="word-item-actions">
+          <button class="btn-icon" onclick="openModal('${w.id}')">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          </button>
+          <button class="btn-icon btn-delete" onclick="askDelete('${w.id}')">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+          </button>
+        </div>
+      </div>`).join('');
+  }
+
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function openModal(id) {
+    editingId = id || null;
+    const w = id ? words.find(x => x.id === id) : null;
+    document.getElementById('modal-title').innerHTML = w ? '言葉を<span>編集</span>' : '新しい<span>言葉</span>を登録';
+    document.getElementById('input-word').value = w ? w.word : '';
+    document.getElementById('input-note').value = w ? (w.note || '') : '';
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); editingId = null; }
+  function closeModalOnOverlay(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+
+  function saveWord() {
+    const word = document.getElementById('input-word').value.trim();
+    const note = document.getElementById('input-note').value.trim();
+    if (!word) { document.getElementById('input-word').style.borderColor = 'var(--ember)'; return; }
+    document.getElementById('input-word').style.borderColor = '';
+    if (editingId) { const w = words.find(x => x.id === editingId); w.word = word; w.note = note; }
+    else { words.unshift({ id: genId(), word, note, created: Date.now() }); }
+    save(); closeModal(); renderList();
+    document.getElementById('word-count').textContent = words.length + ' words';
+  }
+
+  function askDelete(id) {
+    deletingId = id;
+    const w = words.find(x => x.id === id);
+    document.getElementById('confirm-text').textContent = w.word.length > 40 ? w.word.substr(0,40)+'…' : w.word;
+    document.getElementById('confirm-overlay').classList.add('open');
+  }
+
+  function closeConfirm() { document.getElementById('confirm-overlay').classList.remove('open'); deletingId = null; }
+
+  function confirmDelete() {
+    words = words.filter(x => x.id !== deletingId);
+    save(); closeConfirm(); renderList();
+  }
+
+  renderToday();
+</script>
+</body>
+</html>
